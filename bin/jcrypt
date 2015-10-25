@@ -1,0 +1,47 @@
+#!/usr/bin/env node
+
+(function () {
+    'use strict';
+
+    let jcrypt = require('../lib/util.js'),
+        Getopt = require('node-getopt'),
+        callback = function (type, err, data) {
+            if (err) {
+                throw err;
+            }
+
+            console.log('Created ' + type + ' file ' + data);
+        },
+        getopt, opt, filename;
+
+    getopt = new Getopt([
+        ['a', 'armor', 'Output the enciphered data as ASCII.'],
+        ['d', 'decrypt=ARG', 'Perform decryption.'],
+        ['e', 'encrypt=ARG', 'Perform encryption.'],
+        ['o', 'output=ARG', 'The output file.  Will prompt for it if not given.'],
+        ['r', 'recipients=ARG', 'The intended person(s).'],
+        ['s', 'sign', 'Digitally sign as well as encipher.'],
+        ['h', 'help', 'Display help.']
+    ]).bindHelp();
+
+    // `parseSystem` is an alias of parse(process.argv.slice(2)).
+    opt = getopt.parseSystem().options;
+
+    if ((filename = opt.decrypt) !== undefined) {
+        jcrypt.decryptFile({
+            filename: filename,
+            output: opt.output,
+            callback: callback.bind(null, 'decrypted')
+        });
+    } else if ((filename = opt.encrypt) !== undefined) {
+        jcrypt.encryptFile({
+            filename: filename,
+            output: opt.output,
+            sign: opt.sign,
+            recipients: opt.recipients,
+            armor: opt.armor,
+            callback: callback.bind(null, 'encrypted')
+        });
+    }
+}());
+
