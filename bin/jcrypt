@@ -6,11 +6,10 @@
     let jcrypt = require('../lib/util.js'),
         Getopt = require('node-getopt'),
         callback = function (type, err, data) {
-            if (err) {
-                throw err;
-            }
-
-            console.log('Created ' + type + ' file ' + data);
+            console.log(!err ?
+                ('Created ' + type + ' file ' + data) :
+                '[ERROR] No such file'
+            );
         },
         getopt, opt, filename;
 
