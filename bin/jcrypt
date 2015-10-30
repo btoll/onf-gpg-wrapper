@@ -20,6 +20,7 @@
         ['o', 'output=ARG', 'The output file.  Will prompt for it if not given.'],
         ['r', 'recipients=ARG', 'The intended person(s).'],
         ['s', 'sign', 'Digitally sign as well as encipher.'],
+        ['', 'stream', 'Bypasses all high-level APIs and calls low-lever stream API directly. Don\'t specify an output stream when wanting to stream directly to STDOUT.'],
         ['h', 'help', 'Display help.']
     ]).bindHelp();
 
@@ -27,20 +28,30 @@
     opt = getopt.parseSystem().options;
 
     if ((filename = opt.decrypt) !== undefined) {
-        jcrypt.decryptFile({
-            filename: filename,
-            output: opt.output,
-            callback: callback.bind(null, 'decrypted')
-        });
+        if (opt.stream) {
+            jcrypt.decryptStream(filename, opt.output);
+        } else {
+            jcrypt.decryptFile({
+                filename: filename,
+                output: opt.output,
+                callback: callback.bind(null, 'decrypted')
+            });
+        }
     } else if ((filename = opt.encrypt) !== undefined) {
-        jcrypt.encryptFile({
-            filename: filename,
-            output: opt.output,
-            sign: opt.sign,
-            recipients: opt.recipients,
-            armor: opt.armor,
-            callback: callback.bind(null, 'encrypted')
-        });
+        if (opt.stream) {
+            jcrypt.encryptStream(filename, opt.output);
+        } else {
+            jcrypt.encryptFile({
+                filename: filename,
+                output: opt.output,
+                options: {
+                    armor: opt.armor,
+                    recipients: opt.recipients,
+                    sign: opt.sign
+                },
+                callback: callback.bind(null, 'encrypted')
+            });
+        }
     }
 }());
 
