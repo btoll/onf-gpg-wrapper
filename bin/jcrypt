@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-(function () {
+(() => {
     'use strict';
 
     let jcrypt = require('../lib/util.js'),
         Getopt = require('node-getopt'),
-        callback = function (type, err, data) {
+        callback = (type, err, data) => {
             console.log(!err ?
                 ('Created ' + type + ' file ' + data) :
                 '[ERROR] No such file'
@@ -30,7 +30,7 @@
     if ((filename = opt.decrypt) !== undefined) {
         jcrypt.stream(filename, opt.output, ['--decrypt'])
             .then(console.log)
-            .catch(function (err) {
+            .catch((err) => {
                 console.log(err);
                 process.exit();
             });
@@ -52,7 +52,7 @@
 
         jcrypt.stream(filename, opt.output, ['--encrypt'].concat(args))
             .then(console.log)
-            .catch(function (err) {
+            .catch((err) => {
                 console.log(err);
                 process.exit();
             });
