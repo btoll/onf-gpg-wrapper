@@ -11,6 +11,7 @@
                 '[ERROR] No such file'
             );
         },
+        args = [],
         getopt, opt, filename;
 
     getopt = new Getopt([
@@ -27,19 +28,34 @@
     opt = getopt.parseSystem().options;
 
     if ((filename = opt.decrypt) !== undefined) {
-        jcrypt.stream(filename, opt.output, ['--decrypt']).then(console.log).catch(function (err) {
-            console.log(err);
-            process.exit();
-        });
+        jcrypt.stream(filename, opt.output, ['--decrypt'])
+            .then(console.log)
+            .catch(function (err) {
+                console.log(err);
+                process.exit();
+            });
     } else if ((filename = opt.encrypt) !== undefined) {
-        jcrypt.stream(filename, opt.output, [
-            '--encrypt',
-            '-r', 'benjam72@yahoo.com',
-            '--armor'
-        ]).then(console.log).catch(function (err) {
-            console.log(err);
-            process.exit();
-        });
+        if (opt.armor) {
+            args.push('--armor');
+        }
+
+        if (opt.recipients) {
+            args.push('-r', opt.recipients);
+        } else {
+            // Have it default to me for now.
+            args.push('-r', 'benjam72@yahoo.com');
+        }
+
+        if (opt.sign) {
+            args.push('--sign');
+        }
+
+        jcrypt.stream(filename, opt.output, ['--encrypt'].concat(args))
+            .then(console.log)
+            .catch(function (err) {
+                console.log(err);
+                process.exit();
+            });
     }
 }());
 
