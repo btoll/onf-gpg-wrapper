@@ -4,14 +4,44 @@
     'use strict';
 
     let jcrypt = require('../lib/util'),
-        Getopt = require('node-getopt'),
+        argv = require('yargs')
+            .usage('Usage: jcrypt [options]')
+            .example('jcrypt -e c.txt --armor', 'Encrypt the file in-place.')
+            .example('jcrypt -d c.asc -o c.txt --stream', 'Use the stream API to decrypt c.asc')
+
+            .boolean('armor')
+            .describe('armor', 'Output the enciphered data as ASCII.')
+
+            .alias('d', 'decrypt')
+            .describe('d', 'Perform decryption.')
+
+            .alias('e', 'encrypt')
+            .describe('e', 'Perform encryption.')
+
+            .alias('o', 'output')
+            .describe('o', 'The output file.')
+
+            .alias('r', 'recipients')
+            .describe('r', 'The intended person(s).')
+
+            .alias('s', 'sign')
+            .boolean('sign')
+            .describe('s', 'Digitally sign as well as encipher.')
+
+            .boolean('stream')
+            .describe('stream', 'Use streams.')
+
+            .help('h')
+            .alias('h', 'help')
+            .argv,
+
         callback = (type, err, data) => {
             console.log(!err ?
                 ('Created ' + type + ' file ' + data) :
                 '[ERROR] No such file'
             );
         },
-        getopt, opt, filename;
+        filename;
 
     function doOperation(type, args) {
         // '--decrypt' or '--encrypt'
@@ -19,15 +49,15 @@
 
         args = args || [];
 
-        if (!opt.stream) {
-            jcrypt(filename, opt.output, [op].concat(args))
+        if (!argv.stream) {
+            jcrypt(filename, argv.output, [op].concat(args))
                 .then(console.log)
                 .catch((err) => {
                     console.log(err);
                     process.exit();
                 });
         } else {
-            jcrypt.stream(filename, opt.output, [op].concat(args))
+            jcrypt.stream(filename, argv.output, [op].concat(args))
                 .then(console.log)
                 .catch((err) => {
                     console.log(err);
@@ -36,27 +66,13 @@
         }
     }
 
-    getopt = new Getopt([
-        ['a', 'armor', 'Output the enciphered data as ASCII.'],
-        ['d', 'decrypt=arg', 'Perform decryption.'],
-        ['e', 'encrypt=arg', 'Perform encryption.'],
-        ['o', 'output=arg', 'The output file.  Will prompt for it if not given.'],
-        ['r', 'recipients=arg', 'The intended person(s).'],
-        ['s', 'sign', 'Digitally sign as well as encipher.'],
-        ['', 'stream', 'Use streams.'],
-        ['h', 'help', 'Display help.']
-    ]).bindHelp();
-
-    // `parseSystem` is an alias of parse(process.argv.slice(2)).
-    opt = getopt.parseSystem().options;
-
-    if ((filename = opt.decrypt) !== undefined) {
+    if ((filename = argv.decrypt) !== undefined) {
         doOperation('decrypt');
-    } else if ((filename = opt.encrypt) !== undefined) {
+    } else if ((filename = argv.encrypt) !== undefined) {
         let args = [];
 
         /*
-        if (opt.armor) {
+        if (argv.armor) {
             args.push('--armor');
         }
         */
@@ -64,14 +80,14 @@
         // For now, default to always armor.
         args.push('--armor');
 
-        if (opt.recipients) {
-            args.push('-r', opt.recipients);
+        if (argv.recipients) {
+            args.push('-r', argv.recipients);
         } else {
             // Have it default to me for now.
             args.push('-r', 'benjam72@yahoo.com');
         }
 
-        if (opt.sign) {
+        if (argv.sign) {
             args.push('--sign');
         }
 

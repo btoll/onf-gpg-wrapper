@@ -15,7 +15,7 @@
   "author": "Benjamin Toll <benjam72@yahoo.com> (http://www.benjamintoll.com)",
   "license": "WTFPL",
   "dependencies": {
-    "node-getopt": "^0.2.3"
+    "yargs": "^3.29.0"
   },
   "repository": {
     "type": "git",
