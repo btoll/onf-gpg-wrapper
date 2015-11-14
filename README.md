@@ -12,5 +12,6 @@
     -o, --output=ARG | The output file.  Will prompt for it if not given.
     -r, --recipients=ARG | The intended person(s).
     -s, --sign | Digitally sign as well as encipher.
+    --stream | Use streams.
     -h, --help | Display help.
 

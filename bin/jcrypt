@@ -3,7 +3,7 @@
 (() => {
     'use strict';
 
-    let jcrypt = require('../lib/util.js'),
+    let jcrypt = require('../lib/util'),
         Getopt = require('node-getopt'),
         callback = (type, err, data) => {
             console.log(!err ?
@@ -11,16 +11,39 @@
                 '[ERROR] No such file'
             );
         },
-        args = [],
         getopt, opt, filename;
+
+    function doOperation(type, args) {
+        // '--decrypt' or '--encrypt'
+        let op = `--${type}`;
+
+        args = args || [];
+
+        if (!opt.stream) {
+            jcrypt(filename, opt.output, [op].concat(args))
+                .then(console.log)
+                .catch((err) => {
+                    console.log(err);
+                    process.exit();
+                });
+        } else {
+            jcrypt.stream(filename, opt.output, [op].concat(args))
+                .then(console.log)
+                .catch((err) => {
+                    console.log(err);
+                    process.exit();
+                });
+        }
+    }
 
     getopt = new Getopt([
         ['a', 'armor', 'Output the enciphered data as ASCII.'],
-        ['d', 'decrypt=ARG', 'Perform decryption.'],
-        ['e', 'encrypt=ARG', 'Perform encryption.'],
-        ['o', 'output=ARG', 'The output file.  Will prompt for it if not given.'],
-        ['r', 'recipients=ARG', 'The intended person(s).'],
+        ['d', 'decrypt=arg', 'Perform decryption.'],
+        ['e', 'encrypt=arg', 'Perform encryption.'],
+        ['o', 'output=arg', 'The output file.  Will prompt for it if not given.'],
+        ['r', 'recipients=arg', 'The intended person(s).'],
         ['s', 'sign', 'Digitally sign as well as encipher.'],
+        ['', 'stream', 'Use streams.'],
         ['h', 'help', 'Display help.']
     ]).bindHelp();
 
@@ -28,16 +51,18 @@
     opt = getopt.parseSystem().options;
 
     if ((filename = opt.decrypt) !== undefined) {
-        jcrypt.stream(filename, opt.output, ['--decrypt'])
-            .then(console.log)
-            .catch((err) => {
-                console.log(err);
-                process.exit();
-            });
+        doOperation('decrypt');
     } else if ((filename = opt.encrypt) !== undefined) {
+        let args = [];
+
+        /*
         if (opt.armor) {
             args.push('--armor');
         }
+        */
+
+        // For now, default to always armor.
+        args.push('--armor');
 
         if (opt.recipients) {
             args.push('-r', opt.recipients);
@@ -50,12 +75,7 @@
             args.push('--sign');
         }
 
-        jcrypt.stream(filename, opt.output, ['--encrypt'].concat(args))
-            .then(console.log)
-            .catch((err) => {
-                console.log(err);
-                process.exit();
-            });
+        doOperation('encrypt', args);
     }
 }());
 
