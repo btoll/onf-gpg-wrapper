@@ -45,25 +45,14 @@
 
     function doOperation(type, args) {
         // '--decrypt' or '--encrypt'
-        let op = `--${type}`;
+        let fn = !argv.stream ? jcrypt : jcrypt.stream;
 
-        args = args || [];
-
-        if (!argv.stream) {
-            jcrypt(filename, argv.output, [op].concat(args))
-                .then(console.log)
-                .catch((err) => {
-                    console.log(err);
-                    process.exit();
-                });
-        } else {
-            jcrypt.stream(filename, argv.output, [op].concat(args))
-                .then(console.log)
-                .catch((err) => {
-                    console.log(err);
-                    process.exit();
-                });
-        }
+        fn.call(jcrypt, filename, argv.output, [`--${type}`].concat(args || []))
+            .then(console.log)
+            .catch((err) => {
+                console.log(err);
+                process.exit();
+            });
     }
 
     if ((filename = argv.decrypt) !== undefined) {
