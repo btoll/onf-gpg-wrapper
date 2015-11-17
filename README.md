@@ -4,14 +4,17 @@
 
 ### Usage
 
-    Property | Description
+    Command | Description
+    ------------ | -------------
+    decrypt | Perform decryption.
+    encrypt | Perform encryption.
+    sign | Digitally sign as well as encipher.
+
+    Option | Description
     ------------ | -------------
     --armor | Output the enciphered data as ASCII.
-    -d, --decrypt=file | Perform decryption.
-    -e, --encrypt=file | Perform encryption.
     -o, --output=file | The output file.
     -r, --recipients=file | The intended person(s).
-    -s, --sign | Digitally sign as well as encipher.
     --stream | Use streams.
     -h, --help | Display help.
 

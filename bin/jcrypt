@@ -5,28 +5,27 @@
 
     let jcrypt = require('../lib/util'),
         argv = require('yargs')
-            .usage('Usage: jcrypt [options]')
-            .example('jcrypt -e c.txt --armor', 'Encrypt the file in-place.')
-            .example('jcrypt -d c.asc -o c.txt --stream', 'Use the stream API to decrypt c.asc')
+            .usage('Usage: jcrypt <command> [options]')
+
+            .example('jcrypt decrypt -f c.asc -o c.txt --stream', 'Use the stream API to decrypt c.asc')
+            .example('jcrypt encrypt -f c.txt --armor', 'Encrypt the file in-place')
+            .example('jcrypt sign -f c.asc -o c.txt', 'Sign and encrypt the file')
+
+            .command('decrypt', 'Perform decryption')
+            .command('encrypt', 'Perform encryption')
+            .command('sign', 'Digitally sign as well as encipher')
 
             .boolean('armor')
             .describe('armor', 'Output the enciphered data as ASCII.')
 
-            .alias('d', 'decrypt')
-            .describe('d', 'Perform decryption.')
-
-            .alias('e', 'encrypt')
-            .describe('e', 'Perform encryption.')
+            .alias('f', 'file')
+            .describe('f', 'The file on which to operate')
 
             .alias('o', 'output')
             .describe('o', 'The output file.')
 
             .alias('r', 'recipients')
-            .describe('r', 'The intended person(s).')
-
-            .alias('s', 'sign')
-            .boolean('sign')
-            .describe('s', 'Digitally sign as well as encipher.')
+            .describe('r', 'The intended recipient(s).')
 
             .boolean('stream')
             .describe('stream', 'Use streams.')
@@ -35,14 +34,10 @@
             .alias('h', 'help')
             .argv,
 
-        callback = (type, err, data) => {
-            console.log(!err ?
-                ('Created ' + type + ' file ' + data) :
-                '[ERROR] No such file'
-            );
-        },
-        filename,
-        args = [];
+        command = argv._[0],
+        filename = argv.file,
+        args = [],
+        logError = console.log.bind(console, '[ERROR]');
 
     function doOperation(type) {
         // type === '--decrypt' | '--encrypt' | '--sign'
@@ -51,7 +46,7 @@
         fn.call(jcrypt, filename, argv.output || '', [`--${type}`].concat(args))
             .then(console.log)
             .catch((err) => {
-                console.log(err);
+                logError(err);
                 process.exit();
             });
     }
@@ -63,7 +58,7 @@
             });
 
         rl.on('SIGINT', () => {
-            console.log('\nAborting.');
+            logError('Aborting.');
             rl.close();
         });
 
@@ -71,42 +66,39 @@
             if (['', 'y', 'Y', 'yes', 'Yes'].indexOf(answer) > -1) {
                 doOperation(op, args);
             } else {
-                console.log('\nAborting.');
+                logError('Aborting.');
             }
 
             rl.close();
         });
     }
 
-    if ((filename = argv.decrypt) !== undefined) {
-        if (!argv.output) {
-            doReadline('decrypt');
-        } else {
-            doOperation('decrypt');
-        }
-    } else if ((filename = argv.encrypt) !== undefined) {
-        let operation = 'encrypt';
+    if (!filename) {
+        logError('No filename');
+        return;
+    }
 
-        if (argv.armor) {
-            args.push('--armor');
-        }
+    if (command) {
+        if (command === 'encrypt') {
+            if (argv.armor) {
+                args.push('--armor');
+            }
 
-        if (argv.recipients) {
-            args.push('-r', argv.recipients);
-        } else {
-            // Have it default to me for now.
-            args.push('-r', 'benjam72@yahoo.com');
-        }
-
-        if (argv.sign) {
-            operation = 'sign';
+            if (argv.recipients) {
+                args.push('-r', argv.recipients);
+            } else {
+                // Have it default to me for now.
+                args.push('-r', 'benjam72@yahoo.com');
+            }
         }
 
         if (!argv.output) {
-            doReadline(operation);
+            doReadline(command);
         } else {
-            doOperation(operation);
+            doOperation(command);
         }
+    } else {
+        logError('No command given');
     }
 }());
 
