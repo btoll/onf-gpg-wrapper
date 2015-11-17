@@ -41,13 +41,14 @@
                 '[ERROR] No such file'
             );
         },
-        filename;
+        filename,
+        args = [];
 
-    function doOperation(type, args) {
-        // '--decrypt' or '--encrypt'
+    function doOperation(type) {
+        // type === '--decrypt' | '--encrypt' | '--sign'
         let fn = !argv.stream ? jcrypt : jcrypt.stream;
 
-        fn.call(jcrypt, filename, argv.output, [`--${type}`].concat(args || []))
+        fn.call(jcrypt, filename, argv.output || '', [`--${type}`].concat(args))
             .then(console.log)
             .catch((err) => {
                 console.log(err);
@@ -55,19 +56,40 @@
             });
     }
 
-    if ((filename = argv.decrypt) !== undefined) {
-        doOperation('decrypt');
-    } else if ((filename = argv.encrypt) !== undefined) {
-        let args = [];
+    function doReadline(op) {
+        let rl = require('readline').createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
 
-        /*
+        rl.on('SIGINT', () => {
+            console.log('\nAborting.');
+            rl.close();
+        });
+
+        rl.question('Not providing an output file will edit in-place. Continue anyway? [Y|n]', (answer) => {
+            if (['', 'y', 'Y', 'yes', 'Yes'].indexOf(answer) > -1) {
+                doOperation(op, args);
+            } else {
+                console.log('\nAborting.');
+            }
+
+            rl.close();
+        });
+    }
+
+    if ((filename = argv.decrypt) !== undefined) {
+        if (!argv.output) {
+            doReadline('decrypt');
+        } else {
+            doOperation('decrypt');
+        }
+    } else if ((filename = argv.encrypt) !== undefined) {
+        let operation = 'encrypt';
+
         if (argv.armor) {
             args.push('--armor');
         }
-        */
-
-        // For now, default to always armor.
-        args.push('--armor');
 
         if (argv.recipients) {
             args.push('-r', argv.recipients);
@@ -77,10 +99,14 @@
         }
 
         if (argv.sign) {
-            args.push('--sign');
+            operation = 'sign';
         }
 
-        doOperation('encrypt', args);
+        if (!argv.output) {
+            doReadline(operation);
+        } else {
+            doOperation(operation);
+        }
     }
 }());
 
