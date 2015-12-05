@@ -88,7 +88,7 @@
                 args.push('-r', argv.recipients);
             } else {
                 // Have it default to me for now.
-                args.push('-r', 'benjam72@yahoo.com');
+                args.push('-r', 'ben@benjamintoll.com');
             }
         }
 
