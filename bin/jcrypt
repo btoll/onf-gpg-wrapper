@@ -3,7 +3,7 @@
 (() => {
     'use strict';
 
-    let jcrypt = require('../lib/util'),
+    let jcrypt = require('../index.js'),
         argv = require('yargs')
             .usage('Usage: jcrypt <command> [options]')
 

@@ -6,7 +6,6 @@
     let fs = require('fs'),
         fileOptions, gpgOptions;
 
-
     function readData(data, args) {
         return new Promise((resolve, reject) => {
             let gpg = spawn(args),
@@ -27,13 +26,25 @@
                 if (code !== 0) {
                     // If error is empty, we probably redirected stderr to stdout
                     // (for verifySignature, import, etc).
-                    reject(code);
+                    reject(error);
                 } else {
                     resolve(Buffer.concat(buffer, bufferLen));
                 }
             });
 
             gpg.stdin.end(data);
+        });
+    }
+
+    function readFile(srcPath) {
+        return new Promise((resolve, reject) => {
+            fs.readFile(srcPath, (err, data) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(data);
+                }
+            });
         });
     }
 
@@ -51,66 +62,63 @@
         return require('child_process').spawn('gpg', args);
     }
 
-    // Public API.
-    module.exports = (() => {
-        function readFile(src) {
-            return new Promise((resolve, reject) => {
-                fs.readFile(src, (err, data) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(data);
-                    }
-                });
+    function writeFile(destPath, data) {
+        return new Promise((resolve, reject) => {
+            fs.writeFile(destPath, data, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(`Operation on ${destPath} completed successfully`);
+                }
             });
-        }
-
-        function writeFile(dest, data) {
-            return new Promise((resolve, reject) => {
-                fs.writeFile(dest, data, (err) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(`Operation on ${dest} completed successfully.`);
-                    }
-                });
-            });
-        }
-
-
-        /**
-         * Note options can be either an Array or an Object.
-         * If Array, assume it's only GPG options.
-         */
-        return (src, dest, options) => {
-            // Note that it's the responsibility of the caller to handle any errors.
-            setOptions(options);
-
-            return readFile(src)
-                .then((data) => {
-                    return readData(data, gpgOptions);
-                })
-                .then((data) => {
-                    return writeFile(dest || src, data, fileOptions);
-                });
-        };
-    })();
+        });
+    }
 
     /**
+     * @param {string} srcPath
+     * @param {string} destPath
+     * @param {array/object} options
+     * @param {boolean} returnAsData
+     *
      * Note options can be either an Array or an Object.
      * If Array, assume it's only GPG options.
      */
-    module.exports.stream = (src, dest, options, isData) => {
+    module.exports = (srcPath, destPath, options, returnAsData) => {
+        // Note that it's the responsibility of the caller to handle any errors.
+        setOptions(options);
+
+        return readFile(srcPath).then((data) => {
+            return readData(data, gpgOptions);
+        })
+        .then((data) => {
+            if (!returnAsData) {
+                return writeFile(destPath || srcPath, data, fileOptions);
+            } else {
+                return data;
+            }
+        });
+    };
+
+    /**
+     * @param {string} srcPath
+     * @param {string} destPath
+     * @param {array/object} options
+     * @param {boolean} isData
+     *
+     * Note options can be either an Array or an Object.
+     * If Array, assume it's only GPG options.
+     */
+    module.exports.stream = (srcPath, destPath, options, isData) => {
         return new Promise((resolve, reject) => {
             let gpg, writable;
 
             setOptions(options);
 
-            writable = dest ?
-                fs.createWriteStream(dest, fileOptions) :
+            writable = destPath ?
+                fs.createWriteStream(destPath, fileOptions) :
                 process.stdout;
 
-            if (src === dest) {
+            if (srcPath === destPath) {
                 reject('This is a streaming API.\nThe destination cannot be the same as the source.\nAborting.');
             } else {
                 process.on('SIGINT', () => {
@@ -119,24 +127,24 @@
                 });
 
                 if (isData) {
-                    readData(src, gpgOptions)
+                    readData(srcPath, gpgOptions)
                         .then((data) => {
                             writable.write(data);
-                            resolve(`Operation on ${dest} completed successfully.`);
+                            resolve(`Operation on ${destPath} completed successfully`);
                         })
                         .catch(console.log);
                 } else {
                     // http://bit.ly/1WoAMFT
                     gpg = spawn(gpgOptions);
 
-                    fs.createReadStream(src)
+                    fs.createReadStream(srcPath)
                         .on('error', reject)
                         .pipe(gpg.stdin);
 
                     gpg.stdout.pipe(writable)
                         .on('error', reject)
                         .on('close', () => {
-                            resolve(`Operation on ${dest} completed successfully.`);
+                            resolve(`Operation on ${destPath} completed successfully`);
                         });
                 }
             }

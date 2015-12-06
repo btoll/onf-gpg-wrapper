@@ -5,7 +5,7 @@
   "bin": {
     "jcrypt": "./bin/jcrypt"
   },
-  "main": "lib/util.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
