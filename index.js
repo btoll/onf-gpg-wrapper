@@ -1,9 +1,8 @@
-/* eslint-disable no-console */
-
 (() => {
     'use strict';
 
-    let fs = require('fs'),
+    let logger = require('logger'),
+        fs = require('fs'),
         fileOptions, gpgOptions;
 
     function readData(data, args) {
@@ -122,7 +121,7 @@
                 reject('This is a streaming API.\nThe destination cannot be the same as the source.\nAborting.');
             } else {
                 process.on('SIGINT', () => {
-                    console.log('\nAborted!');
+                    logger.info('\nAborted!');
                     process.exit();
                 });
 
@@ -132,7 +131,7 @@
                             writable.write(data);
                             resolve(`Operation on ${destPath} completed successfully`);
                         })
-                        .catch(console.log);
+                        .catch(logger.error);
                 } else {
                     // http://bit.ly/1WoAMFT
                     gpg = spawn(gpgOptions);

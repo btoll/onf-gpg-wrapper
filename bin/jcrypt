@@ -4,6 +4,7 @@
     'use strict';
 
     let jcrypt = require('../index.js'),
+        logger = require('logger'),
         argv = require('yargs')
             .usage('Usage: jcrypt <command> [options]')
 
@@ -37,14 +38,14 @@
         command = argv._[0],
         filename = argv.file,
         args = [],
-        logError = console.log.bind(console, '[ERROR]');
+        logError = logger.error;
 
     function doOperation(type) {
         // type === '--decrypt' | '--encrypt' | '--sign'
         let fn = !argv.stream ? jcrypt : jcrypt.stream;
 
         fn.call(jcrypt, filename, argv.output || '', [`--${type}`].concat(args))
-            .then(console.log)
+            .then(logger.log)
             .catch((err) => {
                 logError(err);
                 process.exit();

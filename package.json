@@ -15,6 +15,7 @@
   "author": "Benjamin Toll <benjam72@yahoo.com> (http://www.benjamintoll.com)",
   "license": "WTFPL",
   "dependencies": {
+    "logger": "git+https://github.com/btoll/logger.git",
     "yargs": "^3.29.0"
   },
   "repository": {
@@ -22,3 +23,4 @@
     "url": "https://github.com/btoll/jcrypt"
   }
 }
+
