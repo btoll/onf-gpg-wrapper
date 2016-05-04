@@ -131,7 +131,7 @@
                             writable.write(data);
                             resolve(destPath);
                         })
-                        .catch(logger.error);
+                        .catch(reject);
                 } else {
                     // http://bit.ly/1WoAMFT
                     gpg = spawn(gpgOptions);
