@@ -67,7 +67,7 @@
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(`Operation on ${destPath} completed successfully`);
+                    resolve(destPath);
                 }
             });
         });
@@ -129,7 +129,7 @@
                     readData(srcPath, gpgOptions)
                         .then((data) => {
                             writable.write(data);
-                            resolve(`Operation on ${destPath} completed successfully`);
+                            resolve(destPath);
                         })
                         .catch(logger.error);
                 } else {
@@ -143,7 +143,7 @@
                     gpg.stdout.pipe(writable)
                         .on('error', reject)
                         .on('close', () => {
-                            resolve(`Operation on ${destPath} completed successfully`);
+                            resolve(destPath);
                         });
                 }
             }
