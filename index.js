@@ -1,12 +1,22 @@
 'use strict';
 
-const logger = require('logger');
 const fs = require('fs');
-let fileOptions, gpgOptions;
+const logger = require('logger');
 
-const readData = (data, args) =>
+const getStream = (destPath, fileOptions) =>
+    destPath ?
+        fs.createWriteStream(destPath, fileOptions) :
+        process.stdout;
+
+const listenForEvent = ev =>
+    process.on(ev, () => (
+        logger.info('\nAborted!'),
+        process.exit()
+    ));
+
+const readData = (data, gpgOptions) =>
     new Promise((resolve, reject) => {
-        const gpg = spawn(args);
+        const gpg = spawn(gpgOptions);
         const buffer = [];
         let bufferLen = 0;
         let error = '';
@@ -42,16 +52,6 @@ const readFile = srcPath =>
         })
     );
 
-const setOptions = options => {
-    if (Array.isArray(options)) {
-        gpgOptions = options;
-        fileOptions = {};
-    } else {
-        gpgOptions = options.gpg;
-        fileOptions = options.file;
-    }
-};
-
 const spawn = args => require('child_process').spawn('gpg', args);
 
 const writeFile = (destPath, data) =>
@@ -66,67 +66,67 @@ const writeFile = (destPath, data) =>
     );
 
 /**
- * @param {string} srcPath
- * @param {string} destPath
- * @param {array/object} options
- * @param {boolean} returnAsData
+ * @param {String} srcPath
+ * @param {String} destPath
+ * @param {Object} fileOptions
+ * @param {Array} gpgOptions
  *
- * Note options can be either an Array or an Object.
- * If Array, assume it's only GPG options.
+ * Non-streaming API.
  */
-module.exports = (srcPath, destPath, options, returnAsData) => {
+module.exports = (srcPath, destPath, fileOptions, gpgOptions) => {
     // Note that it's the responsibility of the caller to handle any errors.
-    setOptions(options);
-
     return readFile(srcPath)
     .then(data => readData(data, gpgOptions))
-    .then(data => {
-        if (!returnAsData) {
-            return writeFile(destPath || srcPath, data, fileOptions);
-        } else {
-            return data;
-        }
-    });
+    .then(data => writeFile(destPath || srcPath, data, fileOptions));
+};
+
+module.exports.readFile = (srcPath, gpgOptions) => {
+    // Note that it's the responsibility of the caller to handle any errors.
+    return readFile(srcPath)
+    .then(data => readData(data, gpgOptions));
 };
 
 /**
- * @param {string} srcPath
- * @param {string} destPath
- * @param {array/object} options
- * @param {boolean} isData
- *
- * Note options can be either an Array or an Object.
- * If Array, assume it's only GPG options.
+ * @param {String} srcPath
+ * @param {String} destPath
+ * @param {Object} fileOptions
+ * @param {Array} gpgOptions
  */
-module.exports.stream = (srcPath, destPath, options, isData) =>
+module.exports.stream = (srcPath, destPath, fileOptions, gpgOptions) =>
     new Promise((resolve, reject) => {
-        setOptions(options);
-
-        let writable = destPath ?
-            fs.createWriteStream(destPath, fileOptions) :
-            process.stdout;
-
         if (srcPath === destPath) {
             reject('This is a streaming API.\nThe destination cannot be the same as the source.\nAborting.');
         } else {
-            process.on('SIGINT', () => (logger.info('\nAborted!'), process.exit()));
+            listenForEvent('SIGINT');
 
-            if (isData) {
-                readData(srcPath, gpgOptions)
-                .then(data => (writable.write(data), resolve(destPath)))
-                .catch(reject);
-            } else {
-                // http://bit.ly/1WoAMFT
-                let gpg = spawn(gpgOptions);
+            // http://bit.ly/1WoAMFT
+            let gpg = spawn(gpgOptions);
 
-                fs.createReadStream(srcPath)
-                .on('error', reject)
-                .pipe(gpg.stdin);
+            fs.createReadStream(srcPath)
+            .on('error', reject)
+            .pipe(gpg.stdin);
 
-                gpg.stdout.pipe(writable)
-                .on('error', reject)
-                .on('close', () => resolve(destPath));
-            }
+            gpg.stdout.pipe(getStream(destPath, fileOptions))
+            .on('error', reject)
+            .on('close', () => resolve(destPath));
         }
+    });
+
+/**
+ * @param {String} data
+ * @param {String} destPath
+ * @param {Object} fileOptions
+ * @param {Array} gpgOptions
+ */
+module.exports.streamDataToFile = (data, destPath, fileOptions, gpgOptions) =>
+    new Promise((resolve, reject) => {
+        listenForEvent('SIGINT');
+
+        readData(data, gpgOptions)
+        .then(data => (
+            getStream(destPath, fileOptions).write(data),
+            resolve(destPath)
+        ))
+        .catch(reject);
     });
 
