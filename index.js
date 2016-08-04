@@ -52,7 +52,7 @@ const readFile = srcPath =>
         })
     );
 
-const spawn = args => require('child_process').spawn('gpg', args);
+const spawn = gpgOptions => require('child_process').spawn('gpg', gpgOptions);
 
 const writeFile = (destPath, data) =>
     new Promise((resolve, reject) =>
@@ -73,18 +73,14 @@ const writeFile = (destPath, data) =>
  *
  * Non-streaming API.
  */
-module.exports = (srcPath, destPath, fileOptions, gpgOptions) => {
-    // Note that it's the responsibility of the caller to handle any errors.
-    return readFile(srcPath)
+module.exports = (srcPath, destPath, fileOptions, gpgOptions) =>
+    readFile(srcPath)
     .then(data => readData(data, gpgOptions))
     .then(data => writeFile(destPath || srcPath, data, fileOptions));
-};
 
-module.exports.readFile = (srcPath, gpgOptions) => {
-    // Note that it's the responsibility of the caller to handle any errors.
-    return readFile(srcPath)
+module.exports.readFile = (srcPath, gpgOptions) =>
+    readFile(srcPath)
     .then(data => readData(data, gpgOptions));
-};
 
 /**
  * @param {String} srcPath
