@@ -3,9 +3,18 @@
 const fs = require('fs');
 const logger = require('logger');
 
-const getStream = (destPath, fileOptions) =>
-    destPath ?
-        fs.createWriteStream(destPath, fileOptions) :
+let defaultWriteOptions = {
+    defaultEncoding: 'utf8',
+    encoding: 'utf8',
+    fd: null,
+    flags: 'w',
+    mode: 0o0600
+};
+
+// TODO: (dest, writeOptions = defaultWriteOptions)
+const getStream = (dest, writeOptions) =>
+    dest ?
+        fs.createWriteStream(dest, writeOptions || defaultWriteOptions) :
         process.stdout;
 
 const listenForEvent = ev =>
@@ -14,24 +23,25 @@ const listenForEvent = ev =>
         process.exit()
     ));
 
-const readData = (data, gpgOptions) =>
+// Note: `data` last for partial application!
+const processData = (gpgConfig, data) =>
     new Promise((resolve, reject) => {
-        const gpg = spawn(gpgOptions);
+        const gpg = spawn(gpgConfig);
         const buffer = [];
+
         let bufferLen = 0;
         let error = '';
 
-        gpg.stdout.on('data', buff => {
-            buffer.push(buff);
-            bufferLen += buff.length;
-        });
+        gpg.stdout.on('data', buff => (
+            buffer.push(buff),
+            bufferLen += buff.length
+        ));
 
         gpg.stderr.on('data', buff => error += buff.toString('utf8'));
 
         gpg.on('close', code => {
             if (code !== 0) {
-                // If error is empty, we probably redirected stderr to stdout
-                // (for verifySignature, import, etc).
+                // If error is empty, we probably redirected stderr to stdout (for verifySignature, import, etc).
                 reject(error);
             } else {
                 resolve(Buffer.concat(buffer, bufferLen));
@@ -40,6 +50,30 @@ const readData = (data, gpgOptions) =>
 
         gpg.stdin.end(data);
     });
+
+// Note: `data` last for partial application!
+const processFile = (filename, dest, gpgConfig, writeOptions, data) => {
+    new Promise((resolve, reject) => {
+        if (!dest) {
+            // Write in-place if it's the same file.
+            writeFile(filename, writeOptions, data);
+        } else {
+            // Else, stream!
+            listenForEvent('SIGINT');
+
+            // http://bit.ly/1WoAMFT
+            const gpg = spawn(gpgConfig);
+
+            fs.createReadStream(filename)
+            .on('error', reject)
+            .pipe(gpg.stdin);
+
+            gpg.stdout.pipe(getStream(dest, writeOptions))
+            .on('error', reject)
+            .on('close', () => resolve(dest));
+        }
+    });
+};
 
 const readFile = srcPath =>
     new Promise((resolve, reject) =>
@@ -52,77 +86,133 @@ const readFile = srcPath =>
         })
     );
 
-const spawn = gpgOptions => require('child_process').spawn('gpg', gpgOptions);
+const setDefaultWriteOptions = writeOptions => defaultWriteOptions = writeOptions;
+const spawn = gpgConfig => require('child_process').spawn('gpg', gpgConfig);
 
-const writeFile = (destPath, data) =>
+// TODO: (dest, data, writeOptions = defaultWriteOptions)
+// Note: `data` last for partial application!
+const writeFile = (dest, writeOptions, data) =>
     new Promise((resolve, reject) =>
-        fs.writeFile(destPath, data, err => {
+        fs.writeFile(dest, data, writeOptions || defaultWriteOptions, err => {
             if (err) {
                 reject(err);
             } else {
-                resolve(destPath);
+                resolve(dest);
             }
         })
     );
 
-/**
- * @param {String} srcPath
- * @param {String} destPath
- * @param {Object} fileOptions
- * @param {Array} gpgOptions
- *
- * Non-streaming API.
- */
-module.exports = (srcPath, destPath, fileOptions, gpgOptions) =>
-    readFile(srcPath)
-    .then(data => readData(data, gpgOptions))
-    .then(data => writeFile(destPath || srcPath, data, fileOptions));
+// FP helper functions.
+//
+// Decryption.
+const decryptToFileComposed = fileEncryptionMethod => (filename, dest, writeOptions) =>
+    fileEncryptionMethod(filename)
+    .then(processFile.bind(null, filename, dest, ['--decrypt'], writeOptions));
 
-module.exports.readFile = (srcPath, gpgOptions) =>
-    readFile(srcPath)
-    .then(data => readData(data, gpgOptions));
+const decrypt = processData.bind(null, ['--decrypt']);
+const decryptFile = filename =>
+    readFile(filename)
+    .then(decrypt);
+const decryptToFile = decryptToFileComposed(decryptFile);
+const decryptDataToFile = (data, dest, writeOptions) =>
+    decrypt(data)
+    .then(writeFile.bind(null, dest, writeOptions));
 
-/**
- * @param {String} srcPath
- * @param {String} destPath
- * @param {Object} fileOptions
- * @param {Array} gpgOptions
- */
-module.exports.stream = (srcPath, destPath, fileOptions, gpgOptions) =>
-    new Promise((resolve, reject) => {
-        if (srcPath === destPath) {
-            reject('This is a streaming API.\nThe destination cannot be the same as the source.\nAborting.');
-        } else {
-            listenForEvent('SIGINT');
+// Encryption.
+const addEncryptSwitch = gpgConfig => ['--encrypt'].concat(gpgConfig);
+const processDataComposed = gpgConfig => data => processData(addEncryptSwitch(gpgConfig), data);
 
-            // http://bit.ly/1WoAMFT
-            let gpg = spawn(gpgOptions);
+const encryptToFileComposed = fileEncryptionMethod => (filename, dest, gpgConfig, writeOptions) =>
+    fileEncryptionMethod(filename, gpgConfig)
+    .then(processFile.bind(null, filename, dest, addEncryptSwitch(gpgConfig), writeOptions));
 
-            fs.createReadStream(srcPath)
-            .on('error', reject)
-            .pipe(gpg.stdin);
+const encrypt = (data, gpgConfig) => processDataComposed(gpgConfig)(data);
+const encryptFile = (filename, gpgConfig) =>
+    readFile(filename)
+    .then(processDataComposed(gpgConfig));
+const encryptToFile = encryptToFileComposed(encryptFile);
+const encryptDataToFile = (data, dest, gpgOptions, writeOptions) =>
+    encrypt(data, gpgOptions)
+    .then(writeFile.bind(null, dest, writeOptions));
 
-            gpg.stdout.pipe(getStream(destPath, fileOptions))
-            .on('error', reject)
-            .on('close', () => resolve(destPath));
-        }
-    });
+module.exports = {
+    /**
+     * @param {String} data
+     * @return {Promise}
+     *
+     * Decrypts `data` string.
+     */
+    decrypt,
 
-/**
- * @param {String} data
- * @param {String} destPath
- * @param {Object} fileOptions
- * @param {Array} gpgOptions
- */
-module.exports.streamDataToFile = (data, destPath, fileOptions, gpgOptions) =>
-    new Promise((resolve, reject) => {
-        listenForEvent('SIGINT');
+    /**
+     * @param {String} filename
+     * @return {Promise}
+     *
+     * Decrypts file.
+     */
+    decryptFile,
 
-        readData(data, gpgOptions)
-        .then(data => (
-            getStream(destPath, fileOptions).write(data),
-            resolve(destPath)
-        ))
-        .catch(reject);
-    });
+    /**
+     * @param {String} filename
+     * @param {String} dest
+     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @return {Promise}
+     *
+     * Decrypts file and writes it to `dest`.
+     */
+    decryptToFile,
+
+    /**
+     * @param {String} data
+     * @param {String} dest
+     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @return {Promise}
+     *
+     * Decrypts data and writes it to `dest`.
+     */
+    decryptDataToFile,
+
+    /**
+     * @param {String} data
+     * @param {Array} gpgConfig
+     * @return {Promise}
+     *
+     * Encrypts `data` string.
+     */
+    encrypt,
+
+    /**
+     * @param {String} filename
+     * @param {Array} gpgConfig
+     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @return {Promise}
+     *
+     * Encrypts file.
+     */
+    encryptFile,
+
+    /**
+     * @param {String} filename
+     * @param {String} dest
+     * @param {Array} gpgConfig
+     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @return {Promise}
+     *
+     * Encrypts file and writes it to `dest`.
+     */
+    encryptToFile,
+
+    /**
+     * @param {String} data
+     * @param {String} dest
+     * @param {Array} gpgConfig
+     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @return {Promise}
+     *
+     * Encrypts data and writes it to `dest`.
+     */
+    encryptDataToFile,
+
+    setDefaultWriteOptions
+};
 
