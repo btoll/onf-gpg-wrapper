@@ -105,25 +105,21 @@ const writeFile = (dest, data, writeOptions) =>
 // FP helper functions.
 //
 // Decryption.
-const decryptToFileComposed = fileEncryptionMethod => (filename, dest, writeOptions) =>
-    fileEncryptionMethod(filename)
-    .then(processFile.bind(null, filename, dest, ['--decrypt'], writeOptions));
-
 const decrypt = processData.bind(null, ['--decrypt']);
 const decryptFile = filename => readFile(filename).then(decrypt);
-const decryptToFile = decryptToFileComposed(decryptFile);
+const decryptToFile = (filename, dest, writeOptions) =>
+    decryptFile(filename)
+    .then(processFile.bind(null, filename, dest, ['--decrypt'], writeOptions));
 
 // Encryption.
 const addEncryptSwitch = gpgConfig => ['--encrypt'].concat(gpgConfig);
 const processDataComposed = gpgConfig => data => processData(addEncryptSwitch(gpgConfig), data);
 
-const encryptToFileComposed = fileEncryptionMethod => (filename, dest, gpgConfig, writeOptions) =>
-    fileEncryptionMethod(filename, gpgConfig)
-    .then(processFile.bind(null, filename, dest, addEncryptSwitch(gpgConfig), writeOptions));
-
 const encrypt = (data, gpgConfig) => processDataComposed(gpgConfig)(data);
 const encryptFile = (filename, gpgConfig) => readFile(filename) .then(processDataComposed(gpgConfig));
-const encryptToFile = encryptToFileComposed(encryptFile);
+const encryptToFile = (filename, dest, gpgConfig, writeOptions) =>
+    encryptFile(filename, gpgConfig)
+    .then(processFile.bind(null, filename, dest, addEncryptSwitch(gpgConfig), writeOptions));
 
 module.exports = {
     /**
