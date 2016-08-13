@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const logger = require('logger');
+const R = require('ramda');
 
 let defaultWriteOptions = {
     defaultEncoding: 'utf8',
@@ -23,8 +24,7 @@ const listenForEvent = ev =>
         process.exit()
     ));
 
-// Note: `data` last for partial application!
-const processData = (gpgConfig, data) =>
+const processData = R.curry((gpgConfig, data) =>
     new Promise((resolve, reject) => {
         const gpg = spawn(gpgConfig);
         const buffer = [];
@@ -49,10 +49,9 @@ const processData = (gpgConfig, data) =>
         });
 
         gpg.stdin.end(data);
-    });
+    }));
 
-// Note: `data` last for partial application!
-const processFile = (filename, dest, gpgConfig, writeOptions, data) => {
+const processFile = R.curry((filename, dest, gpgConfig, writeOptions, data) => {
     new Promise((resolve, reject) => {
         if (!dest) {
             // Write in-place if it's the same file.
@@ -73,7 +72,7 @@ const processFile = (filename, dest, gpgConfig, writeOptions, data) => {
             .on('close', () => resolve(dest));
         }
     });
-};
+});
 
 const readFile = srcPath =>
     new Promise((resolve, reject) =>
@@ -105,21 +104,21 @@ const writeFile = (dest, data, writeOptions) =>
 // FP helper functions.
 //
 // Decryption.
-const decrypt = processData.bind(null, ['--decrypt']);
+const decrypt = processData(['--decrypt']);
 const decryptFile = filename => readFile(filename).then(decrypt);
 const decryptToFile = (filename, dest, writeOptions) =>
     decryptFile(filename)
-    .then(processFile.bind(null, filename, dest, ['--decrypt'], writeOptions));
+    .then(processFile(filename, dest, ['--decrypt'], writeOptions));
 
 // Encryption.
-const addEncryptSwitch = gpgConfig => ['--encrypt'].concat(gpgConfig);
-const processDataComposed = gpgConfig => data => processData(addEncryptSwitch(gpgConfig), data);
+const addEncryptionOptions = R.concat(['--encrypt']);
+const processDataComposed = R.compose(processData, addEncryptionOptions);
 
-const encrypt = (data, gpgConfig) => processDataComposed(gpgConfig)(data);
-const encryptFile = (filename, gpgConfig) => readFile(filename) .then(processDataComposed(gpgConfig));
+const encrypt = (data, gpgConfig) => processData(addEncryptionOptions(gpgConfig), data);
+const encryptFile = (filename, gpgConfig) => readFile(filename).then(processDataComposed(gpgConfig));
 const encryptToFile = (filename, dest, gpgConfig, writeOptions) =>
     encryptFile(filename, gpgConfig)
-    .then(processFile.bind(null, filename, dest, addEncryptSwitch(gpgConfig), writeOptions));
+    .then(processFile(filename, dest, addEncryptionOptions(gpgConfig), writeOptions));
 
 module.exports = {
     /**

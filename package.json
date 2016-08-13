@@ -16,6 +16,7 @@
   "license": "WTFPL",
   "dependencies": {
     "logger": "git+https://github.com/btoll/logger.git",
+    "ramda": "^0.22.1",
     "yargs": "^3.29.0"
   },
   "repository": {
