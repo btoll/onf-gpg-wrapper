@@ -2,15 +2,11 @@
   "name": "jcrypt",
   "version": "0.1.0",
   "description": "A simple wrapper for GPG.",
-  "bin": {
-    "jcrypt": "./bin/jcrypt"
-  },
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [
-    "GPG"
+    "cryptography",
+    "GPG",
+    "PGP"
   ],
   "author": "Benjamin Toll <benjam72@yahoo.com> (http://www.benjamintoll.com)",
   "license": "WTFPL",
