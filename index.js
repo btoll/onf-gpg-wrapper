@@ -116,8 +116,9 @@ const decryptToFile = (filename, dest, writeOptions) =>
 const addEncryptionOptions = R.concat(['--encrypt']);
 const addOptionsAndProcessData = R.compose(processData, addEncryptionOptions);
 
-const encrypt = (data, gpgConfig) => addOptionsAndProcessData(gpgConfig)(data);
-const encryptFile = (filename, gpgConfig) => readFile(filename).then(addOptionsAndProcessData(gpgConfig));
+// const encrypt = (data, gpgConfig) => addOptionsAndProcessData(gpgConfig)(data);
+const encrypt = R.curry((gpgConfig, data) => addOptionsAndProcessData(gpgConfig)(data));
+const encryptFile = (gpgConfig, filename) => readFile(filename).then(addOptionsAndProcessData(gpgConfig));
 const encryptToFile = (filename, dest, gpgConfig, writeOptions) =>
     processFile(filename, dest, addEncryptionOptions(gpgConfig), writeOptions);
 
@@ -158,8 +159,8 @@ module.exports = {
     encrypt,
 
     /**
-     * @param {String} filename
      * @param {Array} gpgConfig
+     * @param {String} filename
      * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
      * @return {Promise}
      *
