@@ -1,3 +1,8 @@
+// The idea is not to pass the writeOptions upon every call to encryptToFile or decryptToFile b/c
+// it makes the API cumbersome and the write options probably won't change from write to write. At
+// this point, we're defining sensible defaults and exposing an API (setDefaultWriteOptions) if the
+// user wants to set their own.
+
 'use strict';
 
 const fs = require('fs');
@@ -12,10 +17,9 @@ let defaultWriteOptions = {
     mode: 0o0600
 };
 
-// TODO: (dest, writeOptions = defaultWriteOptions)
 const getStream = (dest, writeOptions) =>
     dest ?
-        fs.createWriteStream(dest, writeOptions || defaultWriteOptions) :
+        fs.createWriteStream(dest, writeOptions) :
         process.stdout;
 
 const listenForEvent = ev =>
@@ -51,7 +55,7 @@ const processData = R.curry((gpgConfig, data) =>
         gpg.stdin.end(data);
     }));
 
-const processFile = (filename, dest, gpgConfig, writeOptions) =>
+const processFile = (filename, dest, gpgConfig, writeOptions = defaultWriteOptions) =>
     new Promise((resolve, reject) => {
         if (!dest) {
             // Write in-place if it's the same file.
@@ -93,7 +97,7 @@ const spawn = gpgConfig => require('child_process').spawn('gpg', gpgConfig);
 
 const writeFile = R.curry((dest, writeOptions, data) =>
     new Promise((resolve, reject) =>
-        fs.writeFile(dest, data, writeOptions || defaultWriteOptions, err => {
+        fs.writeFile(dest, data, writeOptions, err => {
             if (err) {
                 reject(err);
             } else {
@@ -109,18 +113,17 @@ const writeFile = R.curry((dest, writeOptions, data) =>
 // Decryption.
 const decrypt = processData(['--decrypt']);
 const decryptFile = R.composeP(decrypt, readFile);
-const decryptToFile = (filename, dest, writeOptions) =>
-    processFile(filename, dest, ['--decrypt'], writeOptions);
+const decryptToFile = R.curry((filename, dest) =>
+    processFile(filename, dest, ['--decrypt']));
 
 // Encryption.
 const addEncryptionOptions = R.concat(['--encrypt']);
 const addOptionsAndProcessData = R.compose(processData, addEncryptionOptions);
 
-// const encrypt = (data, gpgConfig) => addOptionsAndProcessData(gpgConfig)(data);
 const encrypt = R.curry((gpgConfig, data) => addOptionsAndProcessData(gpgConfig)(data));
-const encryptFile = (gpgConfig, filename) => readFile(filename).then(addOptionsAndProcessData(gpgConfig));
-const encryptToFile = (filename, dest, gpgConfig, writeOptions) =>
-    processFile(filename, dest, addEncryptionOptions(gpgConfig), writeOptions);
+const encryptFile = R.curry((gpgConfig, filename) => readFile(filename).then(addOptionsAndProcessData(gpgConfig)));
+const encryptToFile = R.curry((gpgConfig, filename, dest) =>
+    processFile(filename, dest, addEncryptionOptions(gpgConfig)));
 
 module.exports = {
     /**
@@ -141,17 +144,26 @@ module.exports = {
 
     /**
      * @param {String} filename
-     * @param {String} dest
-     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @param {String/Null} dest
      * @return {Promise}
      *
      * Decrypts file and writes it to `dest`.
+     * Passing `null` as `dest` will write the file in-place.
+     *
+     * Will use the file write options passed into #setDefaultWriteOptions or
+     * the system defaults:
+     *
+     *      defaultEncoding: 'utf8'
+     *      encoding: 'utf8'
+     *      fd: null
+     *      flags: 'w'
+     *      mode: 0o0600
      */
     decryptToFile,
 
     /**
-     * @param {String} data
      * @param {Array} gpgConfig
+     * @param {String} data
      * @return {Promise}
      *
      * Encrypts `data` string.
@@ -161,7 +173,6 @@ module.exports = {
     /**
      * @param {Array} gpgConfig
      * @param {String} filename
-     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
      * @return {Promise}
      *
      * Encrypts file.
@@ -169,13 +180,22 @@ module.exports = {
     encryptFile,
 
     /**
-     * @param {String} filename
-     * @param {String} dest
      * @param {Array} gpgConfig
-     * @param {Object} [writeOptions] Defaults to `defaultWriteOptions`.
+     * @param {String} filename
+     * @param {String/Null} dest
      * @return {Promise}
      *
      * Encrypts file and writes it to `dest`.
+     * Passing `null` as `dest` will write the file in-place.
+     *
+     * Will use the file write options passed into #setDefaultWriteOptions or
+     * the system defaults:
+     *
+     *      defaultEncoding: 'utf8'
+     *      encoding: 'utf8'
+     *      fd: null
+     *      flags: 'w'
+     *      mode: 0o0600
      */
     encryptToFile,
 
