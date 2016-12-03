@@ -1,7 +1,6 @@
-// The idea is not to pass the writeOptions upon every call to encryptToFile or decryptToFile b/c
-// it makes the API cumbersome and the write options probably won't change from write to write. At
-// this point, we're defining sensible defaults and exposing an API (setDefaultWriteOptions) if the
-// user wants to set their own.
+// The idea is not to pass the writeOptions upon every call to encryptToFile or decryptToFile b/c/ it makes the API
+// cumbersome and the write options probably won't change from write to write. At this point, we're defining sensible
+// defaults and exposing an API (setDefaultWriteOptions) if the user wants to set their own.
 
 'use strict';
 
@@ -55,13 +54,13 @@ const processData = R.curry((gpgConfig, data) =>
         gpg.stdin.end(data);
     }));
 
-const processFile = (filename, dest, gpgConfig, writeOptions = defaultWriteOptions) =>
+const processFile = (target, dest, gpgConfig, isData, writeOptions = defaultWriteOptions) =>
     new Promise((resolve, reject) => {
         if (!dest) {
             // Write in-place if it's the same file.
-            readFile(filename)
+            readFile(target)
             .then(processData(gpgConfig))
-            .then(writeFile(filename, writeOptions))
+            .then(writeFile(target, writeOptions))
             .then(resolve)
             .catch(reject);
         } else {
@@ -71,19 +70,26 @@ const processFile = (filename, dest, gpgConfig, writeOptions = defaultWriteOptio
             // http://bit.ly/1WoAMFT
             const gpg = spawn(gpgConfig);
 
-            fs.createReadStream(filename)
-            .on('error', reject)
-            .pipe(gpg.stdin);
+            if (!isData) {
+                fs.createReadStream(target)
+                .on('error', reject)
+                .pipe(gpg.stdin);
 
-            gpg.stdout.pipe(getStream(dest, writeOptions))
-            .on('error', reject)
-            .on('close', () => resolve(dest));
+                gpg.stdout.pipe(getStream(dest, writeOptions))
+                .on('error', reject)
+                .on('close', () => resolve(dest));
+            } else {
+                processData(gpgConfig, target)
+                .then(writeFile(dest, writeOptions))
+                .then(resolve)
+                .catch(reject);
+            }
         }
     });
 
-const readFile = srcPath =>
+const readFile = target =>
     new Promise((resolve, reject) =>
-        fs.readFile(srcPath, (err, data) => {
+        fs.readFile(target, (err, data) => {
             if (err) {
                 reject(err);
             } else {
@@ -113,8 +119,10 @@ const writeFile = R.curry((dest, writeOptions, data) =>
 // Decryption.
 const decrypt = processData(['--decrypt']);
 const decryptFile = R.composeP(decrypt, readFile);
-const decryptToFile = R.curry((filename, dest) =>
-    processFile(filename, dest, ['--decrypt']));
+const decryptDataToFile = R.curry((dest, target) =>
+    processFile(target, dest, ['--decrypt'], true));
+const decryptToFile = R.curry((dest, target) =>
+    processFile(target, dest, ['--decrypt'], false));
 
 // Encryption.
 const addEncryptionOptions = R.concat(['--encrypt']);
@@ -122,8 +130,12 @@ const addOptionsAndProcessData = R.compose(processData, addEncryptionOptions);
 
 const encrypt = R.curry((gpgConfig, data) => addOptionsAndProcessData(gpgConfig)(data));
 const encryptFile = R.curry((gpgConfig, filename) => readFile(filename).then(addOptionsAndProcessData(gpgConfig)));
-const encryptToFile = R.curry((gpgConfig, filename, dest) =>
-    processFile(filename, dest, addEncryptionOptions(gpgConfig)));
+
+const encryptDataToFile = R.curry((gpgConfig, dest, target) =>
+    processFile(target, dest, addEncryptionOptions(gpgConfig), true));
+
+const encryptToFile = R.curry((gpgConfig, dest, target) =>
+    processFile(target, dest, addEncryptionOptions(gpgConfig), false));
 
 module.exports = {
     /**
@@ -135,16 +147,37 @@ module.exports = {
     decrypt,
 
     /**
+     * @param {String} dest
+     * @param {String} data
+     * @return {Promise}
+     *
+     * Decrypts data and writes it to `dest`.
+     *
+     * Will use the file write options passed into #setDefaultWriteOptions or
+     * the system defaults:
+     *
+     *      defaultEncoding: 'utf8'
+     *      encoding: 'utf8'
+     *      fd: null
+     *      flags: 'w'
+     *      mode: 0o0600
+     */
+    decryptDataToFile,
+
+    /**
      * @param {String} filename
      * @return {Promise}
      *
-     * Decrypts file.
+     * Decrypts file and returns it as cleartext. It does not change
+     * the target file.
+     *
+     * Use #decryptToFile if wanting to write file contents to a file.
      */
     decryptFile,
 
     /**
-     * @param {String} filename
      * @param {String/Null} dest
+     * @param {String} filename
      * @return {Promise}
      *
      * Decrypts file and writes it to `dest`.
@@ -171,18 +204,39 @@ module.exports = {
     encrypt,
 
     /**
+     * @param {String} dest
+     * @param {String} data
+     * @return {Promise}
+     *
+     * Encrypts data and writes it to `dest`.
+     *
+     * Will use the file write options passed into #setDefaultWriteOptions or
+     * the system defaults:
+     *
+     *      defaultEncoding: 'utf8'
+     *      encoding: 'utf8'
+     *      fd: null
+     *      flags: 'w'
+     *      mode: 0o0600
+     */
+    encryptDataToFile,
+
+    /**
      * @param {Array} gpgConfig
      * @param {String} filename
      * @return {Promise}
      *
-     * Encrypts file.
+     * Encrypts file and returns it as a ciphered stream. It does not change
+     * the target file.
+     *
+     * Use #encryptToFile if wanting to write file contents to a file.
      */
     encryptFile,
 
     /**
      * @param {Array} gpgConfig
-     * @param {String} filename
      * @param {String/Null} dest
+     * @param {String} filename
      * @return {Promise}
      *
      * Encrypts file and writes it to `dest`.
