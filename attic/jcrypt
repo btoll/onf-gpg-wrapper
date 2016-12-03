@@ -1,0 +1,97 @@
+#!/usr/bin/env node
+
+'use strict';
+
+let jcrypt = require('../index.js'),
+    logger = require('logger'),
+    argv = require('yargs')
+        .usage('Usage: jcrypt <command> [options]')
+
+        .example('jcrypt decrypt -f c.asc -o c.txt --stream', 'Use the stream API to decrypt c.asc')
+        .example('jcrypt encrypt -f c.txt --armor', 'Encrypt the file in-place')
+        .example('jcrypt sign -f c.asc -o c.txt', 'Sign and encrypt the file')
+
+        .command('decrypt', 'Perform decryption')
+        .command('encrypt', 'Perform encryption')
+        .command('sign', 'Digitally sign as well as encipher')
+
+        .boolean('armor')
+        .describe('armor', 'Output the enciphered data as ASCII.')
+
+        .alias('f', 'file')
+        .describe('f', 'The file on which to operate')
+
+        .alias('o', 'output')
+        .describe('o', 'The output file.')
+
+        .alias('r', 'recipients')
+        .describe('r', 'The intended recipient(s).')
+
+        .boolean('stream')
+        .describe('stream', 'Use streams.')
+
+        .help('h')
+        .alias('h', 'help')
+        .argv,
+
+    command = argv._[0],
+    filename = argv.file,
+    args = [],
+    logError = logger.error;
+
+function doOperation(type) {
+    // type === '--decrypt' | '--encrypt' | '--sign'
+    let fn = !argv.stream ? jcrypt : jcrypt.stream;
+
+    fn.call(jcrypt, filename, argv.output || '', [`--${type}`].concat(args))
+        .then(logger.log)
+        .catch(err => (logError(err), process.exit()));
+}
+
+function doReadline(op) {
+    const rl = require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    rl.on('SIGINT', () => (logError('Aborting.'), rl.close()));
+
+    rl.question('Not providing an output file will edit in-place. Continue anyway? [Y|n]', answer => {
+        if (['', 'y', 'Y', 'yes', 'Yes'].indexOf(answer) > -1) {
+            doOperation(op, args);
+        } else {
+            logError('Aborting.');
+        }
+
+        rl.close();
+    });
+}
+
+if (!filename) {
+    logError('No filename');
+    return;
+}
+
+if (command) {
+    if (command === 'encrypt') {
+        if (argv.armor) {
+            args.push('--armor');
+        }
+
+        if (argv.recipients) {
+            args.push('-r', argv.recipients);
+        } else {
+            // Have it default to me for now.
+            args.push('-r', 'ben@benjamintoll.com');
+        }
+    }
+
+    if (!argv.output) {
+        doReadline(command);
+    } else {
+        doOperation(command);
+    }
+} else {
+    logError('No command given');
+}
+

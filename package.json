@@ -4,12 +4,15 @@
   "description": "A simple wrapper for GPG.",
   "main": "index.js",
   "keywords": [
+    "crypto",
     "cryptography",
     "GPG",
-    "PGP"
+    "PGP",
+    "encryption",
+    "decryption"
   ],
   "author": "Benjamin Toll <benjam72@yahoo.com> (http://www.benjamintoll.com)",
-  "license": "WTFPL",
+  "license": "MIT",
   "dependencies": {
     "logger": "git+https://github.com/btoll/logger.git",
     "ramda": "^0.22.1",
@@ -18,6 +21,25 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/btoll/jcrypt"
+  },
+  "devDependencies": {
+    "babel-core": "^6.18.2",
+    "babel-preset-es2015": "^6.18.0",
+    "coveralls": "^2.11.15",
+    "dump_describes": "git+https://github.com/btoll/dump_describes.git",
+    "eslint": "^3.11.1",
+    "istanbul": "^0.4.5",
+    "jasmine-core": "^2.5.2"
+  },
+  "scripts": {
+    "clean": "rm -rf build coverage",
+    "compile": "babel -d build index.js",
+    "coverage": "JASMINE_CONFIG_PATH=jasmine.json istanbul cover jasmine --captureExceptions",
+    "coveralls": "npm run coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
+    "lint": "eslint spec src",
+    "specs": "JASMINE_CONFIG_PATH=jasmine.json jasmine && npm run suites",
+    "suites": "dump_describes -t spec/jcrypt-spec.js -d spec -v --html && dump_describes -t spec/jcrypt-spec.js -d spec -v --md",
+    "test": "npm run clean && npm run lint && npm run compile && npm run specs"
   }
 }
 

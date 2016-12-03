@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* {
+    margin: 0;
+    padding: 0;
+}
+
+h3 {
+    background: #726d6d;
+    border: 0px solid #000;
+    border-top-width: 2px;
+    color: #fff;
+    font-weight: normal;
+    padding: 10px 10px 10px 20px;
+}
+
+div > p {
+    padding: 10px;
+}
+
+p.stripe {
+    background: #ddd;
+    border: 0px solid #000;
+    border-top-width: 2px;
+}
+
+span {
+    color: #888;
+}
+
+span.it {
+    color: #eab560;
+}
+
+span.describe {
+    color: #207ab2;
+    margin-right: 5px;
+}
+
+span + span {
+    color: #000;
+    font-weight: bold;
+}
+
+span.fdescribe + span,
+span.xdescribe + span {
+    color: green;
+}
+
+span.fit + span,
+span.xit + span {
+    color: green;
+}
+
+a:link,
+a:visited,
+a:hover,
+a:active {
+    color: #207ab2;
+}
+
+span.fdescribe a:link,
+span.fdescribe a:visited,
+span.fdescribe a:hover,
+span.fdescribe a:active,
+
+span.xdescribe a:link,
+span.xdescribe a:visited,
+span.xdescribe a:hover,
+span.xdescribe a:active {
+    color: #888;
+}
+</style>
+</head>
+
+<body>
+<h3>Test suite 'jcrypt'</h3>
+<div style=""><p class="stripe">
+                <span class="describe">
+                    (<a href="#">describe</a>)
+                </span>
+                <span>'should derp'</span>
+            </p><div><div style="padding-left: 50px;"><p class="">
+                <span class="it">
+                    it -> 
+                </span>
+                <span>'should derp'</span>
+            </p></div></div></div>
+
+<script>
+'use strict';
+
+document.body.addEventListener('click', event => {
+    const target = event.target;
+
+    if (target.tagName.toUpperCase() === 'A') {
+        const style = target.parentNode.parentNode.nextElementSibling.style;
+
+        style.display = (style.display === 'none') ?
+            'block' :
+            'none';
+    }
+
+    event.preventDefault();
+});
+</script>
+</body>
+</html>
+    
