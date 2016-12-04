@@ -67,10 +67,10 @@ const processFile = (target, dest, gpgConfig, isData, writeOptions = defaultWrit
             // Else, stream!
             listenForEvent('SIGINT');
 
-            // http://bit.ly/1WoAMFT
-            const gpg = spawn(gpgConfig);
-
             if (!isData) {
+                // http://bit.ly/1WoAMFT
+                const gpg = spawn(gpgConfig);
+
                 fs.createReadStream(target)
                 .on('error', reject)
                 .pipe(gpg.stdin);
