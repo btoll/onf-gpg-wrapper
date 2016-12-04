@@ -4,9 +4,9 @@
 
 'use strict';
 
+const R = require('ramda');
 const fs = require('fs');
 const logger = require('logger');
-const R = require('ramda');
 
 let defaultWriteOptions = {
     defaultEncoding: 'utf8',

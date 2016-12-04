@@ -7,7 +7,8 @@
 	 it -> 'should return the cleartext file contents'
 
 ###(describe) '#decryptDataToFile'
-	 it -> 'should work'
+	 it -> 'should be able to create a new file'
+	 it -> 'should be able to write cleartext to an existing file'
 
 ###(describe) '#decryptToFile'
 	 it -> 'should write to file'
@@ -20,8 +21,8 @@
 	 it -> 'should stream the enciphered file contents'
 
 ###(describe) '#encryptDataToFile'
-	 it -> 'should create a new file'
-	 it -> 'should write enciphered text to existing file'
+	 it -> 'should be able to create a new file'
+	 it -> 'should be able to write enciphered text to an existing file'
 
 ###(describe) '#encryptToFile'
 	 it -> 'should write to file'

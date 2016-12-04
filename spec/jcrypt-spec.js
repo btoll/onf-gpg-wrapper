@@ -61,7 +61,7 @@ describe('jcrypt', () => {
     });
 
     describe('#decryptDataToFile', () => {
-        it('should work', done =>
+        it('should be able to create a new file', done =>
             jcrypt.encrypt(gpgOptions, fileContents)
             .then(jcrypt.decryptDataToFile(tmpFile))
             .then(readFile)
@@ -69,6 +69,19 @@ describe('jcrypt', () => {
                 expect(cleartext.toString()).toBe(fileContents);
                 done();
             })
+        );
+
+        it('should be able to write cleartext to an existing file', done =>
+            writeFile(tmpFile, fileContents)
+            .then(() =>
+                jcrypt.encrypt(gpgOptions, fileContents)
+                .then(jcrypt.decryptDataToFile(tmpFile))
+                .then(readFile)
+                .then(cleartext => {
+                    expect(cleartext.toString()).toBe(fileContents);
+                    done();
+                })
+            )
         );
     });
 
@@ -120,7 +133,7 @@ describe('jcrypt', () => {
     });
 
     describe('#encryptDataToFile', () => {
-        it('should create a new file', done =>
+        it('should be able to create a new file', done =>
             jcrypt.encryptDataToFile(gpgOptions, tmpFile, fileContents)
             .then(jcrypt.decryptFile)
             .then(cleartext => {
@@ -129,7 +142,7 @@ describe('jcrypt', () => {
             })
         );
 
-        it('should write enciphered text to existing file', done =>
+        it('should be able to write enciphered text to an existing file', done =>
             writeFile(tmpFile, fileContents)
             .then(() =>
                 jcrypt.encryptDataToFile(gpgOptions, tmpFile, fileContents)
