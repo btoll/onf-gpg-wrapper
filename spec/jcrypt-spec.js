@@ -180,5 +180,30 @@ describe('jcrypt', () => {
             )
         );
     });
+
+    describe('#getDefaultWriteOptions', () => {
+        it('should work', () =>
+            expect(jcrypt.getDefaultWriteOptions()).not.toBeUndefined()
+        );
+    });
+
+    describe('#setDefaultWriteOptions', () => {
+        it('should allow the write options to be changed', () => {
+            const getDefaultWriteOptions = jcrypt.getDefaultWriteOptions;
+            const oldOptions = getDefaultWriteOptions();
+
+            // Change the flags and the mode.
+            jcrypt.setDefaultWriteOptions({
+                defaultEncoding: 'utf8',
+                encoding: 'utf8',
+                fd: null,
+                flags: 'a',
+                mode: 0o0777
+            });
+
+            expect(getDefaultWriteOptions().flags).not.toBe(oldOptions.flags);
+            expect(getDefaultWriteOptions().mode).not.toBe(oldOptions.mode);
+        });
+    });
 });
 

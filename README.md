@@ -5,6 +5,8 @@
 
 **Jcrypt** is a wrapper around [GPG] that makes encryption and decryption in any JavaScript application a breeze.
 
+## Example
+
 ## Installation
 
 `npm install https://github.com/btoll/jcrypt.git -g`

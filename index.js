@@ -17,6 +17,12 @@ let defaultWriteOptions = {
     mode: 0o0600
 };
 
+const getDefaultWriteOptions = () =>
+    defaultWriteOptions;
+
+const setDefaultWriteOptions = writeOptions =>
+    defaultWriteOptions = writeOptions;
+
 const getStream = (dest, writeOptions) =>
     dest ?
         fs.createWriteStream(dest, writeOptions) :
@@ -90,9 +96,6 @@ const readFile = target =>
             }
         })
     );
-
-const setDefaultWriteOptions = writeOptions =>
-    defaultWriteOptions = writeOptions;
 
 const spawn = gpgConfig =>
     cp.spawn('gpg', gpgConfig);
@@ -254,6 +257,7 @@ module.exports = {
      */
     encryptToFile,
 
+    getDefaultWriteOptions,
     setDefaultWriteOptions
 };
 

@@ -27,3 +27,9 @@
 ###(describe) '#encryptToFile'
 	 it -> 'should write to file'
 	 it -> 'should write in-place'
+
+###(describe) '#getDefaultWriteOptions'
+	 it -> 'should work'
+
+###(describe) '#setDefaultWriteOptions'
+	 it -> 'should allow the write options to be changed'
