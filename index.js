@@ -55,36 +55,28 @@ const processData = R.curry((gpgConfig, data) =>
         gpg.stdin.end(data);
     }));
 
-const processFile = (target, dest, gpgConfig, isData) =>
+const processFile = (target, dest, gpgConfig) =>
     new Promise((resolve, reject) => {
         if (!dest) {
             // Write in-place if it's the same file.
             readFile(target)
-            .then(processData(gpgConfig))
-            .then(writeFile(target, defaultWriteOptions))
+            .then(writeDataToFile(gpgConfig, target))
             .then(resolve)
             .catch(reject);
         } else {
             // Else, stream!
             listenForEvent('SIGINT');
 
-            if (!isData) {
-                // http://bit.ly/1WoAMFT
-                const gpg = spawn(gpgConfig);
+            // http://bit.ly/1WoAMFT
+            const gpg = spawn(gpgConfig);
 
-                fs.createReadStream(target)
-                .on('error', reject)
-                .pipe(gpg.stdin);
+            fs.createReadStream(target)
+            .on('error', reject)
+            .pipe(gpg.stdin);
 
-                gpg.stdout.pipe(getStream(dest, defaultWriteOptions))
-                .on('error', reject)
-                .on('close', () => resolve(dest));
-            } else {
-                processData(gpgConfig, target)
-                .then(writeFile(dest, defaultWriteOptions))
-                .then(resolve)
-                .catch(reject);
-            }
+            gpg.stdout.pipe(getStream(dest, defaultWriteOptions))
+            .on('error', reject)
+            .on('close', () => resolve(dest));
         }
     });
 
@@ -105,7 +97,11 @@ const setDefaultWriteOptions = writeOptions =>
 const spawn = gpgConfig =>
     cp.spawn('gpg', gpgConfig);
 
-const writeFile = R.curry((dest, writeOptions, data) =>
+const writeDataToFile = R.curry((gpgConfig, dest, target) =>
+    processData(gpgConfig, target)
+    .then(writeFile(defaultWriteOptions, dest)));
+
+const writeFile = R.curry((writeOptions, dest, data) =>
     new Promise((resolve, reject) =>
         fs.writeFile(dest, data, writeOptions, err => {
             if (err) {
@@ -124,9 +120,9 @@ const writeFile = R.curry((dest, writeOptions, data) =>
 const decrypt = processData(['--decrypt']);
 const decryptFile = R.composeP(decrypt, readFile);
 const decryptDataToFile = R.curry((dest, target) =>
-    processFile(target, dest, ['--decrypt'], true));
+    writeDataToFile(['--decrypt'], dest, target));
 const decryptToFile = R.curry((dest, target) =>
-    processFile(target, dest, ['--decrypt'], false));
+    processFile(target, dest, ['--decrypt']));
 
 // Encryption.
 const addEncryptionOptions = R.concat(['--encrypt']);
@@ -137,9 +133,9 @@ const encrypt = R.curry((gpgConfig, data) =>
 const encryptFile = R.curry((gpgConfig, filename) =>
     readFile(filename).then(addOptionsAndProcessData(gpgConfig)));
 const encryptDataToFile = R.curry((gpgConfig, dest, target) =>
-    processFile(target, dest, addEncryptionOptions(gpgConfig), true));
+    writeDataToFile(addEncryptionOptions(gpgConfig), dest, target));
 const encryptToFile = R.curry((gpgConfig, dest, target) =>
-    processFile(target, dest, addEncryptionOptions(gpgConfig), false));
+    processFile(target, dest, addEncryptionOptions(gpgConfig)));
 
 module.exports = {
     /**
@@ -208,6 +204,7 @@ module.exports = {
     encrypt,
 
     /**
+     * @param {Array} gpgConfig
      * @param {String} dest
      * @param {String} data
      * @return {Promise}
