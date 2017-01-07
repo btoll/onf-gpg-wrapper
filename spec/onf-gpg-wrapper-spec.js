@@ -29,7 +29,7 @@ const writeFile = (file, data) =>
         )
     );
 
-describe('jcrypt', () => {
+describe('onf-gpg-wrapper', () => {
     afterAll(() => {
         fs.unlinkSync(tmpFile);
         fs.unlinkSync(tmpFile2);

@@ -1,4 +1,4 @@
-##Test suite 'jcrypt'
+##Test suite 'onf-gpg-wrapper'
 
 ###(describe) '#decrypt'
 	 it -> 'should work'

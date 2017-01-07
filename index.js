@@ -7,7 +7,7 @@
 const R = require('ramda');
 const cp = require('child_process');
 const fs = require('fs');
-const logger = require('logger');
+const logger = require('onf-logger');
 
 let defaultWriteOptions = {
     defaultEncoding: 'utf8',

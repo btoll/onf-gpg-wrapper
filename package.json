@@ -1,5 +1,5 @@
 {
-  "name": "jcrypt",
+  "name": "onf-gpg-wrapper",
   "version": "0.1.0",
   "description": "A simple wrapper for GPG.",
   "main": "index.js",
@@ -13,14 +13,24 @@
   ],
   "author": "Benjamin Toll <benjam72@yahoo.com> (http://www.benjamintoll.com)",
   "license": "MIT",
-  "dependencies": {
-    "logger": "git+https://github.com/btoll/logger.git",
-    "ramda": "^0.22.1",
-    "yargs": "^3.29.0"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/btoll/jcrypt"
+    "url": "https://github.com/btoll/onf-gpg-wrapper"
+  },
+  "scripts": {
+    "clean": "rm -rf build coverage",
+    "compile": "babel -d build index.js",
+    "coverage": "GNUPGHOME=spec/.gnupg JASMINE_CONFIG_PATH=jasmine.json istanbul cover jasmine --captureExceptions",
+    "coveralls": "npm run coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
+    "lint": "eslint spec src",
+    "specs": "GNUPGHOME=spec/.gnupg JASMINE_CONFIG_PATH=jasmine.json jasmine && npm run suites",
+    "suites": "dump_describes -t spec/onf-gpg-wrapper-spec.js -d spec -v --html && dump_describes -t spec/onf-gpg-wrapper-spec.js -d spec -v --md",
+    "test": "npm run clean && npm run lint && npm run compile && npm run specs"
+  },
+  "dependencies": {
+    "onf-logger": "0.1.0",
+    "ramda": "^0.22.1",
+    "yargs": "^3.29.0"
   },
   "devDependencies": {
     "babel-core": "^6.18.2",
@@ -30,16 +40,6 @@
     "eslint": "^3.11.1",
     "istanbul": "^0.4.5",
     "jasmine-core": "^2.5.2"
-  },
-  "scripts": {
-    "clean": "rm -rf build coverage",
-    "compile": "babel -d build index.js",
-    "coverage": "GNUPGHOME=spec/.gnupg JASMINE_CONFIG_PATH=jasmine.json istanbul cover jasmine --captureExceptions",
-    "coveralls": "npm run coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
-    "lint": "eslint spec src",
-    "specs": "GNUPGHOME=spec/.gnupg JASMINE_CONFIG_PATH=jasmine.json jasmine && npm run suites",
-    "suites": "dump_describes -t spec/jcrypt-spec.js -d spec -v --html && dump_describes -t spec/jcrypt-spec.js -d spec -v --md",
-    "test": "npm run clean && npm run lint && npm run compile && npm run specs"
   }
 }
 
