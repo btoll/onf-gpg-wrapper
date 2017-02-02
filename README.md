@@ -14,5 +14,5 @@
 ## License
 
 [GPG]: https://gnupg.org/
-[MIT](LICENSE)
+[GPLv3](COPYING)
 
